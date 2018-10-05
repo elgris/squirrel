@@ -61,7 +61,7 @@ func (sc *stmtCacher) ExecContext(ctx context.Context, query string, args ...int
 	return stmt.ExecContext(ctx, args...)
 }
 
-func (sc *stmtCacher) QueryContext(ctx context.Context, query string, args ...interface{}) (rows *sql.Rows, err error) {
+func (sc *stmtCacher) QueryContext(ctx context.Context, query string, args ...interface{}) (rows RowsScanner, err error) {
 	stmt, err := sc.PrepareContext(ctx, query)
 	if err != nil {
 		return
@@ -85,7 +85,7 @@ func (sc *stmtCacher) Exec(query string, args ...interface{}) (res sql.Result, e
 	return sc.ExecContext(context.Background(), query, args...)
 }
 
-func (sc *stmtCacher) Query(query string, args ...interface{}) (rows *sql.Rows, err error) {
+func (sc *stmtCacher) Query(query string, args ...interface{}) (rows RowsScanner, err error) {
 	return sc.QueryContext(context.Background(), query, args...)
 }
 

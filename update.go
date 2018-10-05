@@ -61,12 +61,12 @@ func (b *UpdateBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
 }
 
 // Query builds and Querys the query with the Runner set by RunWith.
-func (b *UpdateBuilder) Query() (*sql.Rows, error) {
+func (b *UpdateBuilder) Query() (RowsScanner, error) {
 	return b.QueryContext(context.Background())
 }
 
 // QueryContext builds and runs the query using given context and Query command.
-func (b *UpdateBuilder) QueryContext(ctx context.Context) (*sql.Rows, error) {
+func (b *UpdateBuilder) QueryContext(ctx context.Context) (RowsScanner, error) {
 	if b.runWith == nil {
 		return nil, ErrRunnerNotSet
 	}
