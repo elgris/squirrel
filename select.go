@@ -227,6 +227,11 @@ func (b *SelectBuilder) Columns(columns ...string) *SelectBuilder {
 // the columns string, for example:
 //   Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b *SelectBuilder) Column(column interface{}, args ...interface{}) *SelectBuilder {
+	if col, ok := column.(*SelectBuilder); ok == true {
+		sql, _, _ := col.ToSql()
+		column = fmt.Sprintf("(%s) AS %s", sql, args[0])
+	}
+
 	b.columns = append(b.columns, newPart(column, args...))
 
 	return b
