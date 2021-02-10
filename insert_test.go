@@ -48,6 +48,28 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
 }
 
+func TestInsertBuilderReturning(t *testing.T) {
+	b := Insert("a").
+		Columns("foo").
+		Values(1).
+		Returning("bar")
+
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "INSERT INTO a (foo) VALUES (?) RETURNING bar", sql)
+	assert.Equal(t, []interface{}{1}, args)
+
+	b = Insert("a").
+		Columns("foo").
+		Values(1).
+		ReturningSelect(Select("bar").From("b").Where("b.id = a.id"), "bar")
+
+	sql, args, err = b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "INSERT INTO a (foo) VALUES (?) RETURNING (SELECT bar FROM b WHERE b.id = a.id) AS bar", sql)
+	assert.Equal(t, []interface{}{1}, args)
+}
+
 func TestInsertBuilderRunners(t *testing.T) {
 	db := &DBStub{}
 	b := Insert("test").Values(1).Suffix("RETURNING y").RunWith(db)

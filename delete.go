@@ -15,6 +15,8 @@ import (
 type DeleteBuilder struct {
 	StatementBuilderType
 
+	returning
+
 	prefixes   exprs
 	what       []string
 	from       string
@@ -47,7 +49,7 @@ func (b *DeleteBuilder) Exec() (sql.Result, error) {
 	return b.ExecContext(context.Background())
 }
 
-// Exec builds and Execs the query with the Runner set by RunWith using given context.
+// ExecContext builds and Execs the query with the Runner set by RunWith using given context.
 func (b *DeleteBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
 	if b.runWith == nil {
 		return nil, ErrRunnerNotSet
@@ -159,6 +161,13 @@ func (b *DeleteBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		sql.WriteString(strconv.FormatUint(b.offset, 10))
 	}
 
+	if len(b.returning) > 0 {
+		args, err = b.returning.AppendToSql(sql, args)
+		if err != nil {
+			return
+		}
+	}
+
 	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
@@ -241,6 +250,22 @@ func (b *DeleteBuilder) Limit(limit uint64) *DeleteBuilder {
 func (b *DeleteBuilder) Offset(offset uint64) *DeleteBuilder {
 	b.offset = offset
 	b.offsetValid = true
+	return b
+}
+
+// Returning adds columns to RETURNING clause of the query
+//
+// DELETE ... RETURNING is PostgreSQL specific extension
+func (b *DeleteBuilder) Returning(columns ...string) *DeleteBuilder {
+	b.returning.Returning(columns...)
+	return b
+}
+
+// ReturningSelect adds subquery to RETURNING clause of the query
+//
+// DELETE ... RETURNING is PostgreSQL specific extension
+func (b *DeleteBuilder) ReturningSelect(from *SelectBuilder, alias string) *DeleteBuilder {
+	b.returning.ReturningSelect(from, alias)
 	return b
 }
 

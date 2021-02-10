@@ -46,6 +46,28 @@ func TestUpdateBuilderFrom(t *testing.T) {
 	assert.Equal(t, []interface{}{1, 42}, args)
 }
 
+func TestUpdateBuilderReturning(t *testing.T) {
+	b := Update("a").
+		Set("foo", 1).
+		Where("id = ?", 42).
+		Returning("bar")
+
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATE a SET foo = ? WHERE id = ? RETURNING bar", sql)
+	assert.Equal(t, []interface{}{1, 42}, args)
+
+	b = Update("a").
+		Set("foo", 1).
+		Where("id = ?", 42).
+		ReturningSelect(Select("bar").From("b").Where("b.id = a.id"), "bar")
+
+	sql, args, err = b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATE a SET foo = ? WHERE id = ? RETURNING (SELECT bar FROM b WHERE b.id = a.id) AS bar", sql)
+	assert.Equal(t, []interface{}{1, 42}, args)
+}
+
 func TestUpdateBuilderZeroOffsetLimit(t *testing.T) {
 	qb := Update("a").
 		Set("b", true).

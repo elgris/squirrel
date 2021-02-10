@@ -14,6 +14,8 @@ import (
 type InsertBuilder struct {
 	StatementBuilderType
 
+	returning
+
 	prefixes exprs
 	options  []string
 	into     string
@@ -133,6 +135,13 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		return
 	}
 
+	if len(b.returning) > 0 {
+		args, err = b.returning.AppendToSql(sql, args)
+		if err != nil {
+			return
+		}
+	}
+
 	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
@@ -226,6 +235,22 @@ func (b *InsertBuilder) Columns(columns ...string) *InsertBuilder {
 // Values adds a single row's values to the query.
 func (b *InsertBuilder) Values(values ...interface{}) *InsertBuilder {
 	b.values = append(b.values, values)
+	return b
+}
+
+// Returning adds columns to RETURNING clause of the query
+//
+// INSERT ... RETURNING is PostgreSQL specific extension
+func (b *InsertBuilder) Returning(columns ...string) *InsertBuilder {
+	b.returning.Returning(columns...)
+	return b
+}
+
+// ReturningSelect adds subquery to RETURNING clause of the query
+//
+// INSERT ... RETURNING is PostgreSQL specific extension
+func (b *InsertBuilder) ReturningSelect(from *SelectBuilder, alias string) *InsertBuilder {
+	b.returning.ReturningSelect(from, alias)
 	return b
 }
 

@@ -21,6 +21,8 @@ type setClause struct {
 type UpdateBuilder struct {
 	StatementBuilderType
 
+	returning
+
 	prefixes   exprs
 	table      string
 	fromParts  []Sqlizer
@@ -175,6 +177,13 @@ func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		sql.WriteString(strconv.FormatUint(b.offset, 10))
 	}
 
+	if len(b.returning) > 0 {
+		args, err = b.returning.AppendToSql(sql, args)
+		if err != nil {
+			return
+		}
+	}
+
 	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
@@ -228,7 +237,7 @@ func (b *UpdateBuilder) Where(pred interface{}, args ...interface{}) *UpdateBuil
 	return b
 }
 
-// From sets the FROM clause of the query.
+// From adds tables to FROM clause of the query.
 //
 // UPDATE ... FROM is an PostgreSQL specific extension
 func (b *UpdateBuilder) From(tables ...string) *UpdateBuilder {
@@ -241,7 +250,7 @@ func (b *UpdateBuilder) From(tables ...string) *UpdateBuilder {
 	return b
 }
 
-// FromSelect sets a subquery into the FROM clause of the query.
+// FromSelect adds subquery to FROM clause of the query.
 //
 // UPDATE ... FROM is an PostgreSQL specific extension
 func (b *UpdateBuilder) FromSelect(from *SelectBuilder, alias string) *UpdateBuilder {
@@ -266,6 +275,22 @@ func (b *UpdateBuilder) Limit(limit uint64) *UpdateBuilder {
 func (b *UpdateBuilder) Offset(offset uint64) *UpdateBuilder {
 	b.offset = offset
 	b.offsetValid = true
+	return b
+}
+
+// Returning adds columns to RETURNING clause of the query
+//
+// UPDATE ... RETURNING is PostgreSQL specific extension
+func (b *UpdateBuilder) Returning(columns ...string) *UpdateBuilder {
+	b.returning.Returning(columns...)
+	return b
+}
+
+// ReturningSelect adds subquery to RETURNING clause of the query
+//
+// UPDATE ... RETURNING is PostgreSQL specific extension
+func (b *UpdateBuilder) ReturningSelect(from *SelectBuilder, alias string) *UpdateBuilder {
+	b.returning.ReturningSelect(from, alias)
 	return b
 }
 

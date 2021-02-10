@@ -9,6 +9,7 @@ import (
 )
 
 type DBStub struct {
+	res sql.Result
 	err error
 
 	LastPrepareSql string
@@ -39,13 +40,13 @@ func (s *DBStub) PrepareContext(ctx context.Context, query string) (*sql.Stmt, e
 func (s *DBStub) Exec(query string, args ...interface{}) (sql.Result, error) {
 	s.LastExecSql = query
 	s.LastExecArgs = args
-	return nil, nil
+	return s.res, s.err
 }
 
 func (s *DBStub) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	s.LastExecSql = query
 	s.LastExecArgs = args
-	return nil, nil
+	return s.res, s.err
 }
 
 func (s *DBStub) Query(query string, args ...interface{}) (RowsScanner, error) {
@@ -70,6 +71,20 @@ func (s *DBStub) QueryRowContext(ctx context.Context, query string, args ...inte
 	s.LastQueryRowSql = query
 	s.LastQueryRowArgs = args
 	return &Row{RowScanner: &RowStub{}}
+}
+
+type resultStub struct {
+	rowsAffected int64
+	lastInsertId int64
+	err          error
+}
+
+func (r *resultStub) RowsAffected() (int64, error) {
+	return r.rowsAffected, r.err
+}
+
+func (r *resultStub) LastInsertId() (int64, error) {
+	return r.lastInsertId, r.err
 }
 
 var sqlizer = Select("test")

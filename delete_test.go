@@ -113,6 +113,26 @@ func TestDeleteUsing(t *testing.T) {
 	assert.Equal(t, []interface{}{42}, args)
 }
 
+func TestDeleteBuilderReturning(t *testing.T) {
+	b := Delete("a").
+		Where("id = ?", 42).
+		Returning("bar")
+
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "DELETE FROM a WHERE id = ? RETURNING bar", sql)
+	assert.Equal(t, []interface{}{42}, args)
+
+	b = Delete("a").
+		Where("id = ?", 42).
+		ReturningSelect(Select("bar").From("b").Where("b.id = a.id"), "bar")
+
+	sql, args, err = b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "DELETE FROM a WHERE id = ? RETURNING (SELECT bar FROM b WHERE b.id = a.id) AS bar", sql)
+	assert.Equal(t, []interface{}{42}, args)
+}
+
 func TestDeleteBuilderZeroOffsetLimit(t *testing.T) {
 	qb := Delete("").
 		From("b").
