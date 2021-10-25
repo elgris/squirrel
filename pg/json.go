@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/elgris/sqrl"
+	"github.com/SharperShape/sqrl"
 )
 
 // JSONB converts value into Postgres JSONB

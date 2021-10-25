@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/elgris/sqrl"
-	"github.com/elgris/sqrl/pg"
+	"github.com/SharperShape/sqrl"
+	"github.com/SharperShape/sqrl/pg"
 	"github.com/stretchr/testify/assert"
 )
 
