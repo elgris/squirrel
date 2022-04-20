@@ -164,9 +164,6 @@ func (b *InsertBuilder) appendValuesToSQL(w io.Writer, args []interface{}) ([]in
 		for v, val := range row {
 
 			switch typedVal := val.(type) {
-			case expr:
-				valueStrings[v] = typedVal.sql
-				args = append(args, typedVal.args...)
 			case Sqlizer:
 				var valSql string
 				var valArgs []interface{}
