@@ -225,7 +225,8 @@ func (b *SelectBuilder) Columns(columns ...string) *SelectBuilder {
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
-//   Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//
+//	Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b *SelectBuilder) Column(column interface{}, args ...interface{}) *SelectBuilder {
 	b.columns = append(b.columns, newPart(column, args...))
 
@@ -246,6 +247,13 @@ func (b *SelectBuilder) From(tables ...string) *SelectBuilder {
 // FromSelect sets a subquery into the FROM clause of the query.
 func (b *SelectBuilder) FromSelect(from *SelectBuilder, alias string) *SelectBuilder {
 	b.fromParts = append(b.fromParts, Alias(from, alias))
+	return b
+}
+
+// FromValues selects from a VALUES expression in the FROM clause of the query.
+func (b *SelectBuilder) FromValues(from *ValuesBuilder, alias string, columns ...string) *SelectBuilder {
+	aliasName := alias + "(" + strings.Join(columns, ", ") + ")"
+	b.fromParts = append(b.fromParts, Alias(from, aliasName))
 	return b
 }
 

@@ -85,3 +85,12 @@ func Case(what ...interface{}) *CaseBuilder {
 	}
 	return b
 }
+
+// Values returns a new ValuesBuilder, with the provided arguments as the first row.
+// Added to support `SelectBuilder.FromValues`
+func Values(values ...interface{}) *ValuesBuilder {
+	return &ValuesBuilder{
+		StatementBuilderType: StatementBuilder,
+		values:               [][]interface{}{values},
+	}
+}
