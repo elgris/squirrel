@@ -89,8 +89,12 @@ func Case(what ...interface{}) *CaseBuilder {
 // Values returns a new ValuesBuilder, with the provided arguments as the first row.
 // Added to support `SelectBuilder.FromValues`
 func Values(values ...interface{}) *ValuesBuilder {
+	intialVals := make([][]interface{}, 0)
+	if len(values) > 0 {
+		intialVals = append(intialVals, values)
+	}
 	return &ValuesBuilder{
 		StatementBuilderType: StatementBuilder,
-		values:               [][]interface{}{values},
+		values:               intialVals,
 	}
 }
