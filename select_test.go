@@ -96,7 +96,6 @@ func TestSelectBuilderZeroOffsetLimit(t *testing.T) {
 	assert.Equal(t, expectedSql, sql)
 }
 
-
 func TestSelectBuilderFromSelect(t *testing.T) {
 	subQ := Select("c").From("d").Where(Eq{"i": 0})
 	b := Select("a", "b").FromSelect(subQ, "subq")
@@ -107,6 +106,20 @@ func TestSelectBuilderFromSelect(t *testing.T) {
 	assert.Equal(t, expectedSql, sql)
 
 	expectedArgs := []interface{}{0}
+	assert.Equal(t, expectedArgs, args)
+}
+
+func TestSelectBuilderCombiners(t *testing.T) {
+	b := Select("a", "b").From("e").Where("d = ?", 1).
+		UnionAll(Select("a", "b").From("f").Where("c = ?", 0))
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+
+	expectedSql := "SELECT a, b FROM e WHERE d = ? " +
+		"UNION ALL SELECT a, b FROM f WHERE c = ?"
+	assert.Equal(t, expectedSql, sql)
+
+	expectedArgs := []interface{}{1, 0}
 	assert.Equal(t, expectedArgs, args)
 }
 

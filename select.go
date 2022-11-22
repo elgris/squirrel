@@ -29,7 +29,8 @@ type SelectBuilder struct {
 	offset      uint64
 	offsetValid bool
 
-	suffixes exprs
+	combiningParts []Sqlizer
+	suffixes       exprs
 }
 
 // NewSelectBuilder creates new instance of SelectBuilder
@@ -182,6 +183,14 @@ func (b *SelectBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		sql.WriteString(strconv.FormatUint(b.offset, 10))
 	}
 
+	if len(b.combiningParts) > 0 {
+		sql.WriteString(" ")
+		args, err = appendToSql(b.combiningParts, sql, " ", args)
+		if err != nil {
+			return
+		}
+	}
+
 	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
@@ -327,6 +336,11 @@ func (b *SelectBuilder) Limit(limit uint64) *SelectBuilder {
 func (b *SelectBuilder) Offset(offset uint64) *SelectBuilder {
 	b.offset = offset
 	b.offsetValid = true
+	return b
+}
+
+func (b *SelectBuilder) UnionAll(other *SelectBuilder) *SelectBuilder {
+	b.combiningParts = append(b.combiningParts, Expr("UNION ALL"), other)
 	return b
 }
 
