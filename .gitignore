@@ -1,3 +1,5 @@
 squirrel.test
 
 *.sublime*
+
+.idea

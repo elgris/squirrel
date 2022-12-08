@@ -225,7 +225,8 @@ func (b *SelectBuilder) Columns(columns ...string) *SelectBuilder {
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
-//   Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//
+//	Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b *SelectBuilder) Column(column interface{}, args ...interface{}) *SelectBuilder {
 	b.columns = append(b.columns, newPart(column, args...))
 
@@ -293,6 +294,13 @@ func (b *SelectBuilder) RightJoin(join string, rest ...interface{}) *SelectBuild
 // Where will panic if pred isn't any of the above types.
 func (b *SelectBuilder) Where(pred interface{}, args ...interface{}) *SelectBuilder {
 	b.whereParts = append(b.whereParts, newWherePart(pred, args...))
+	return b
+}
+
+func (b *SelectBuilder) WhereIf(clause bool, pred interface{}, args ...interface{}) *SelectBuilder {
+	if clause {
+		b.whereParts = append(b.whereParts, newWherePart(pred, args...))
+	}
 	return b
 }
 
