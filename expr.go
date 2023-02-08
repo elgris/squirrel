@@ -17,8 +17,7 @@ type expr struct {
 // Expr builds value expressions for InsertBuilder and UpdateBuilder.
 //
 // Ex:
-//
-//	.Values(Expr("FROM_UNIXTIME(?)", t))
+//     .Values(Expr("FROM_UNIXTIME(?)", t))
 func Expr(sql string, args ...interface{}) expr {
 	return expr{sql: sql, args: args}
 }
@@ -82,8 +81,7 @@ type aliasExpr struct {
 // Alias allows to define alias for column in SelectBuilder. Useful when column is
 // defined as complex expression like IF or CASE
 // Ex:
-//
-//	.Column(Alias(caseStmt, "case_column"))
+//		.Column(Alias(caseStmt, "case_column"))
 func Alias(expr Sqlizer, alias string) aliasExpr {
 	return aliasExpr{expr, alias}
 }
@@ -98,16 +96,15 @@ func (e aliasExpr) ToSql() (sql string, args []interface{}, err error) {
 
 // Eq is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(Eq{"id": 1})
+//     .Where(Eq{"id": 1})
 type Eq map[string]interface{}
 
 func (eq Eq) toSql(useNotOpr bool) (sql string, args []interface{}, err error) {
 	var (
-		exprs       []string
-		equalOpr    = "="
-		inOpr       = "IN"
-		nullOpr     = "IS"
+		exprs      []string
+		equalOpr   = "="
+		inOpr      = "IN"
+		nullOpr    = "IS"
 		inEmptyExpr = "(1=0)" // Portable FALSE
 	)
 
@@ -162,8 +159,7 @@ func (eq Eq) ToSql() (sql string, args []interface{}, err error) {
 
 // NotEq is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(NotEq{"id": 1}) == "id <> 1"
+//     .Where(NotEq{"id": 1}) == "id <> 1"
 type NotEq Eq
 
 // ToSql builds the query into a SQL string and bound args.
@@ -173,8 +169,7 @@ func (neq NotEq) ToSql() (sql string, args []interface{}, err error) {
 
 // Lt is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(Lt{"id": 1})
+//     .Where(Lt{"id": 1})
 type Lt map[string]interface{}
 
 func (lt Lt) toSql(opposite, orEq bool) (sql string, args []interface{}, err error) {
@@ -225,8 +220,7 @@ func (lt Lt) ToSql() (sql string, args []interface{}, err error) {
 
 // LtOrEq is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(LtOrEq{"id": 1}) == "id <= 1"
+//     .Where(LtOrEq{"id": 1}) == "id <= 1"
 type LtOrEq Lt
 
 func (ltOrEq LtOrEq) ToSql() (sql string, args []interface{}, err error) {
@@ -235,8 +229,7 @@ func (ltOrEq LtOrEq) ToSql() (sql string, args []interface{}, err error) {
 
 // Gt is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(Gt{"id": 1}) == "id > 1"
+//     .Where(Gt{"id": 1}) == "id > 1"
 type Gt Lt
 
 func (gt Gt) ToSql() (sql string, args []interface{}, err error) {
@@ -245,8 +238,7 @@ func (gt Gt) ToSql() (sql string, args []interface{}, err error) {
 
 // GtOrEq is syntactic sugar for use with Where/Having/Set methods.
 // Ex:
-//
-//	.Where(GtOrEq{"id": 1}) == "id >= 1"
+//     .Where(GtOrEq{"id": 1}) == "id >= 1"
 type GtOrEq Lt
 
 func (gtOrEq GtOrEq) ToSql() (sql string, args []interface{}, err error) {
@@ -275,8 +267,7 @@ func (c conj) join(sep string) (sql string, args []interface{}, err error) {
 
 // And is syntactic sugar that glues where/having parts with AND clause
 // Ex:
-//
-//	.Where(And{Expr("a > ?", 15), Expr("b < ?", 20), Expr("c is TRUE")})
+//     .Where(And{Expr("a > ?", 15), Expr("b < ?", 20), Expr("c is TRUE")})
 type And conj
 
 // ToSql builds the query into a SQL string and bound args.
@@ -286,8 +277,7 @@ func (a And) ToSql() (string, []interface{}, error) {
 
 // Or is syntactic sugar that glues where/having parts with OR clause
 // Ex:
-//
-//	.Where(Or{Expr("a > ?", 15), Expr("b < ?", 20), Expr("c is TRUE")})
+//     .Where(Or{Expr("a > ?", 15), Expr("b < ?", 20), Expr("c is TRUE")})
 type Or conj
 
 // ToSql builds the query into a SQL string and bound args.
