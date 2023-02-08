@@ -110,17 +110,29 @@ func TestSelectBuilderFromSelect(t *testing.T) {
 }
 
 func TestSelectBuilderCombiners(t *testing.T) {
-	b := Select("a", "b").From("e").Where("d = ?", 1).
-		UnionAll(Select("a", "b").From("f").Where("c = ?", 0))
-	sql, args, err := b.ToSql()
+	unionQ := Select("a", "b").From("e").Where("d = ?", 1).
+		Union(Select("a", "b").From("f").Where("c = ?", 0))
+	unionSql, unionArgs, err := unionQ.ToSql()
 	assert.NoError(t, err)
 
 	expectedSql := "SELECT a, b FROM e WHERE d = ? " +
-		"UNION ALL SELECT a, b FROM f WHERE c = ?"
-	assert.Equal(t, expectedSql, sql)
+		"UNION SELECT a, b FROM f WHERE c = ?"
+	assert.Equal(t, expectedSql, unionSql)
 
 	expectedArgs := []interface{}{1, 0}
-	assert.Equal(t, expectedArgs, args)
+	assert.Equal(t, expectedArgs, unionArgs)
+
+	unionAllQ := Select("a", "b").From("e").Where("d = ?", 1).
+		UnionAll(Select("a", "b").From("f").Where("c = ?", 0))
+	unionAllSql, unionAllArgs, err := unionAllQ.ToSql()
+	assert.NoError(t, err)
+
+	expectedSql = "SELECT a, b FROM e WHERE d = ? " +
+		"UNION ALL SELECT a, b FROM f WHERE c = ?"
+	assert.Equal(t, expectedSql, unionAllSql)
+
+	expectedArgs = []interface{}{1, 0}
+	assert.Equal(t, expectedArgs, unionAllArgs)
 }
 
 func TestSelectBuilderToSqlErr(t *testing.T) {

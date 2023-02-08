@@ -234,7 +234,8 @@ func (b *SelectBuilder) Columns(columns ...string) *SelectBuilder {
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
-//   Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//
+//	Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b *SelectBuilder) Column(column interface{}, args ...interface{}) *SelectBuilder {
 	b.columns = append(b.columns, newPart(column, args...))
 
@@ -339,6 +340,13 @@ func (b *SelectBuilder) Offset(offset uint64) *SelectBuilder {
 	return b
 }
 
+// Union adds a UNION combination part
+func (b *SelectBuilder) Union(other *SelectBuilder) *SelectBuilder {
+	b.combiningParts = append(b.combiningParts, Expr("UNION"), other)
+	return b
+}
+
+// UnionAll adds a UNION ALL combination part
 func (b *SelectBuilder) UnionAll(other *SelectBuilder) *SelectBuilder {
 	b.combiningParts = append(b.combiningParts, Expr("UNION ALL"), other)
 	return b
