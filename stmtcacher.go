@@ -30,8 +30,8 @@ type DBProxy interface {
 }
 
 type savedStmt struct {
-	stmt       *sql.Stmt
-	expiration *time.Timer
+	stmt    *sql.Stmt
+	lastUse time.Time
 }
 
 type stmtCacher struct {
@@ -44,17 +44,24 @@ type stmtCacher struct {
 //
 // Stmts are cached based on the string value of their queries.
 func NewStmtCacher(prep Preparer) DBProxy {
-	return &stmtCacher{prep: prep, cache: make(map[string]*savedStmt)}
+	sc := &stmtCacher{prep: prep, cache: make(map[string]*savedStmt)}
+
+	sc.startCleanup(maxAge)
+
+	return sc
 }
 
-func (sc *stmtCacher) remove(query string) func() {
-	return func() {
+func (sc *stmtCacher) startCleanup(maxAge time.Duration) {
+	for range time.NewTicker(maxAge).C {
 		sc.mu.Lock()
-		defer sc.mu.Unlock()
-		if s, ok := sc.cache[query]; ok {
-			s.stmt.Close()
+
+		for k, v := range sc.cache {
+			if time.Since(v.lastUse) > maxAge {
+				delete(sc.cache, k)
+			}
 		}
-		delete(sc.cache, query)
+
+		sc.mu.Unlock()
 	}
 }
 
@@ -63,20 +70,19 @@ func (sc *stmtCacher) PrepareContext(ctx context.Context, query string) (*sql.St
 	defer sc.mu.Unlock()
 
 	if s, ok := sc.cache[query]; ok {
-		if !s.expiration.Stop() {
-			<-s.expiration.C
-		}
-		s.expiration.Reset(maxAge)
+		s.lastUse = time.Now()
+
 		return s.stmt, nil
 	}
+
 	stmt, err := sc.prep.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
 	sc.cache[query] = &savedStmt{
-		stmt:       stmt,
-		expiration: time.AfterFunc(maxAge, sc.remove(query)),
+		stmt:    stmt,
+		lastUse: time.Now(),
 	}
 
 	return stmt, nil
