@@ -46,7 +46,7 @@ type stmtCacher struct {
 func NewStmtCacher(prep Preparer) DBProxy {
 	sc := &stmtCacher{prep: prep, cache: make(map[string]*savedStmt)}
 
-	sc.startCleanup(maxAge)
+	go sc.startCleanup(maxAge)
 
 	return sc
 }
@@ -57,6 +57,7 @@ func (sc *stmtCacher) startCleanup(maxAge time.Duration) {
 
 		for k, v := range sc.cache {
 			if time.Since(v.lastUse) > maxAge {
+				v.stmt.Close()
 				delete(sc.cache, k)
 			}
 		}
