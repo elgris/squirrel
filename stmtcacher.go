@@ -37,7 +37,7 @@ type savedStmt struct {
 type stmtCacher struct {
 	prep  Preparer
 	cache map[string]*savedStmt
-	mu    sync.RWMutex
+	mu    sync.Mutex
 }
 
 // NewStmtCacher returns a DBProxy wrapping prep that caches Prepared Stmts.
@@ -67,15 +67,6 @@ func (sc *stmtCacher) startCleanup(maxAge time.Duration) {
 }
 
 func (sc *stmtCacher) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	sc.mu.RLock()
-	if s, ok := sc.cache[query]; ok {
-		s.lastUse = time.Now()
-		sc.mu.RUnlock()
-
-		return s.stmt, nil
-	}
-	sc.mu.RUnlock()
-
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
