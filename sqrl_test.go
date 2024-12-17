@@ -49,13 +49,13 @@ func (s *DBStub) ExecContext(ctx context.Context, query string, args ...interfac
 	return s.res, s.err
 }
 
-func (s *DBStub) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (s *DBStub) Query(query string, args ...interface{}) (RowsScanner, error) {
 	s.LastQuerySql = query
 	s.LastQueryArgs = args
 	return nil, nil
 }
 
-func (s *DBStub) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+func (s *DBStub) QueryContext(ctx context.Context, query string, args ...interface{}) (RowsScanner, error) {
 	s.LastQuerySql = query
 	s.LastQueryArgs = args
 	return nil, nil
@@ -98,7 +98,7 @@ func TestExecWith(t *testing.T) {
 
 func TestQueryWith(t *testing.T) {
 	db := &DBStub{}
-	QueryWith(db, sqlizer)
+	QueryWith(wrapRunner(db), sqlizer)
 	assert.Equal(t, sqlStr, db.LastQuerySql)
 }
 
@@ -115,7 +115,7 @@ func TestWithToSqlErr(t *testing.T) {
 	_, err := ExecWith(db, sqlizer)
 	assert.Error(t, err)
 
-	_, err = QueryWith(db, sqlizer)
+	_, err = QueryWith(wrapRunner(db), sqlizer)
 	assert.Error(t, err)
 
 	err = QueryRowWith(db, sqlizer).Scan()

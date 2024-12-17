@@ -29,7 +29,7 @@ func TestSelectBuilderToSql(t *testing.T) {
 		Where(Or{Expr("j = ?", 10), And{Eq{"k": 11}, Expr("true")}}).
 		GroupBy("l").
 		Having("m = n").
-		OrderBy("o ASC", "p DESC").
+		OrderBy(Expr("o ASC"), Expr("p DESC")).
 		Limit(12).
 		Offset(13).
 		Suffix("FETCH FIRST ? ROWS ONLY", 14)
@@ -74,7 +74,7 @@ func BenchmarkSelectBuilderToSql(b *testing.B) {
 			Where(Or{Expr("j = ?", 10), And{Eq{"k": 11}, Expr("true")}}).
 			GroupBy("l").
 			Having("m = n").
-			OrderBy("o ASC", "p DESC").
+			OrderBy(Expr("o ASC"), Expr("p DESC")).
 			Limit(12).
 			Offset(13).
 			Suffix("FETCH FIRST ? ROWS ONLY", 14)
@@ -95,7 +95,6 @@ func TestSelectBuilderZeroOffsetLimit(t *testing.T) {
 	expectedSql := "SELECT a FROM b LIMIT 0 OFFSET 0"
 	assert.Equal(t, expectedSql, sql)
 }
-
 
 func TestSelectBuilderFromSelect(t *testing.T) {
 	subQ := Select("c").From("d").Where(Eq{"i": 0})

@@ -35,14 +35,14 @@ type ExecerContext interface {
 //
 // Query executes the given query as implemented by database/sql.Query.
 type Queryer interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Query(query string, args ...interface{}) (RowsScanner, error)
 }
 
 // QueryerContext is the interface that wraps the Query method.
 //
 // QueryerContext executes the given query using given context as implemented by database/sql.QueryContext.
 type QueryerContext interface {
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (RowsScanner, error)
 }
 
 // QueryRower is the interface that wraps the QueryRow method.
@@ -63,8 +63,6 @@ type QueryRowerContext interface {
 type BaseRunner interface {
 	Execer
 	ExecerContext
-	Queryer
-	QueryerContext
 }
 
 // Runner groups the Execer, Queryer, and QueryRower interfaces.
@@ -86,6 +84,12 @@ var ErrRunnerNotQueryRunner = fmt.Errorf("cannot QueryRow; Runner is not a Query
 // ErrRunnerNotQueryRunnerContext is returned by QueryRowContext if the RunWith value doesn't implement QueryRowerContext.
 var ErrRunnerNotQueryRunnerContext = fmt.Errorf("cannot QueryRow; Runner is not a QueryRowerContext")
 
+// ErrRunnerNotQueryer is returned by Query if the RunWith value doesn't implement Queryer.
+var ErrRunnerNotQueryer = fmt.Errorf("cannot Query; Runner is not a Queryer")
+
+// ErrRunnerNotQueryerContext is returned by QueryContext if the RunWith value doesn't implement QueryerContext.
+var ErrRunnerNotQueryerContext = fmt.Errorf("cannot Query; Runner is not a QueryerContext")
+
 // ExecWith Execs the SQL returned by s with db.
 func ExecWith(db Execer, s Sqlizer) (res sql.Result, err error) {
 	query, args, err := s.ToSql()
@@ -105,7 +109,7 @@ func ExecWithContext(ctx context.Context, db ExecerContext, s Sqlizer) (res sql.
 }
 
 // QueryWith Querys the SQL returned by s with db.
-func QueryWith(db Queryer, s Sqlizer) (rows *sql.Rows, err error) {
+func QueryWith(db Queryer, s Sqlizer) (rows RowsScanner, err error) {
 	query, args, err := s.ToSql()
 	if err != nil {
 		return
@@ -114,7 +118,7 @@ func QueryWith(db Queryer, s Sqlizer) (rows *sql.Rows, err error) {
 }
 
 // QueryWithContext Querys the SQL returned by s with db.
-func QueryWithContext(ctx context.Context, db QueryerContext, s Sqlizer) (rows *sql.Rows, err error) {
+func QueryWithContext(ctx context.Context, db QueryerContext, s Sqlizer) (rows RowsScanner, err error) {
 	query, args, err := s.ToSql()
 	if err != nil {
 		return
@@ -147,6 +151,14 @@ func (r *dbRunner) QueryRowContext(ctx context.Context, query string, args ...in
 	return r.DB.QueryRowContext(ctx, query, args...)
 }
 
+func (r *dbRunner) Query(query string, args ...interface{}) (RowsScanner, error) {
+	return r.DB.Query(query, args...)
+}
+
+func (r *dbRunner) QueryContext(ctx context.Context, query string, args ...interface{}) (RowsScanner, error) {
+	return r.DB.QueryContext(ctx, query, args...)
+}
+
 // TxRunner wraps sql.Tx to implement Runner.
 type txRunner struct {
 	*sql.Tx
@@ -160,15 +172,62 @@ func (r *txRunner) QueryRowContext(ctx context.Context, query string, args ...in
 	return r.Tx.QueryRowContext(ctx, query, args...)
 }
 
+func (r *txRunner) Query(query string, args ...interface{}) (RowsScanner, error) {
+	return r.Tx.Query(query, args...)
+}
+
+func (r *txRunner) QueryContext(ctx context.Context, query string, args ...interface{}) (RowsScanner, error) {
+	return r.Tx.QueryContext(ctx, query, args...)
+}
+
+// otherRunner wraps BaseRunner to implement Runner.
+type otherRunner struct {
+	BaseRunner
+}
+
+func (r *otherRunner) QueryRow(query string, args ...interface{}) RowScanner {
+	queryRower, ok := r.BaseRunner.(QueryRower)
+	if !ok {
+		return &Row{err: ErrRunnerNotQueryRunner}
+	}
+	return queryRower.QueryRow(query, args)
+}
+
+func (r *otherRunner) QueryRowContext(ctx context.Context, query string, args ...interface{}) RowScanner {
+	queryRower, ok := r.BaseRunner.(QueryRowerContext)
+	if !ok {
+		return &Row{err: ErrRunnerNotQueryRunnerContext}
+	}
+	return queryRower.QueryRowContext(ctx, query, args)
+}
+
+func (r *otherRunner) Query(query string, args ...interface{}) (RowsScanner, error) {
+	queryer, ok := r.BaseRunner.(Queryer)
+	if !ok {
+		return nil, ErrRunnerNotQueryer
+	}
+	return queryer.Query(query, args...)
+}
+
+func (r *otherRunner) QueryContext(ctx context.Context, query string, args ...interface{}) (RowsScanner, error) {
+	queryer, ok := r.BaseRunner.(QueryerContext)
+	if !ok {
+		return nil, ErrRunnerNotQueryerContext
+	}
+	return queryer.QueryContext(ctx, query, args...)
+}
+
 // WrapRunner returns Runner for sql.DB and sql.Tx, or BaseRunner otherwise.
-func wrapRunner(baseRunner BaseRunner) (runner BaseRunner) {
+func wrapRunner(baseRunner BaseRunner) (runner Runner) {
 	switch r := baseRunner.(type) {
 	case *sql.DB:
 		runner = &dbRunner{r}
 	case *sql.Tx:
 		runner = &txRunner{r}
-	default:
+	case Runner:
 		runner = r
+	default:
+		runner = &otherRunner{r}
 	}
 	return
 }

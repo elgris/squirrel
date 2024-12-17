@@ -3,7 +3,7 @@ package sqrl
 // StatementBuilderType is the type of StatementBuilder.
 type StatementBuilderType struct {
 	placeholderFormat PlaceholderFormat
-	runWith           BaseRunner
+	runWith           Runner
 }
 
 // Select returns a SelectBuilder for this StatementBuilder.

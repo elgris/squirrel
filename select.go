@@ -22,7 +22,7 @@ type SelectBuilder struct {
 	whereParts  []Sqlizer
 	groupBys    []string
 	havingParts []Sqlizer
-	orderBys    []string
+	orderBys    []Sqlizer
 
 	limit       uint64
 	limitValid  bool
@@ -57,12 +57,12 @@ func (b *SelectBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
 }
 
 // Query builds and Querys the query with the Runner set by RunWith.
-func (b *SelectBuilder) Query() (*sql.Rows, error) {
+func (b *SelectBuilder) Query() (RowsScanner, error) {
 	return b.QueryContext(context.Background())
 }
 
 // QueryContext builds and Querys the query with the Runner set by RunWith in given context.
-func (b *SelectBuilder) QueryContext(ctx context.Context) (*sql.Rows, error) {
+func (b *SelectBuilder) QueryContext(ctx context.Context) (RowsScanner, error) {
 	if b.runWith == nil {
 		return nil, ErrRunnerNotSet
 	}
@@ -168,7 +168,10 @@ func (b *SelectBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
-		sql.WriteString(strings.Join(b.orderBys, ", "))
+		args, err = appendToSql(b.orderBys, sql, ", ", args)
+		if err != nil {
+			return
+		}
 	}
 
 	// TODO: limit == 0 and offswt == 0 are valid. Need to go dbr way and implement offsetValid and limitValid
@@ -225,7 +228,8 @@ func (b *SelectBuilder) Columns(columns ...string) *SelectBuilder {
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
-//   Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//
+//	Column("IF(col IN ("+Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b *SelectBuilder) Column(column interface{}, args ...interface{}) *SelectBuilder {
 	b.columns = append(b.columns, newPart(column, args...))
 
@@ -311,7 +315,7 @@ func (b *SelectBuilder) Having(pred interface{}, rest ...interface{}) *SelectBui
 }
 
 // OrderBy adds ORDER BY expressions to the query.
-func (b *SelectBuilder) OrderBy(orderBys ...string) *SelectBuilder {
+func (b *SelectBuilder) OrderBy(orderBys ...Sqlizer) *SelectBuilder {
 	b.orderBys = append(b.orderBys, orderBys...)
 	return b
 }

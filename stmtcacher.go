@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"sync"
+	"time"
 )
+
+const maxAge = 4 * time.Hour
 
 // Preparer is the interface that wraps the Prepare method.
 //
@@ -26,9 +29,14 @@ type DBProxy interface {
 	QueryRowerContext
 }
 
+type savedStmt struct {
+	stmt    *sql.Stmt
+	lastUse time.Time
+}
+
 type stmtCacher struct {
 	prep  Preparer
-	cache map[string]*sql.Stmt
+	cache map[string]*savedStmt
 	mu    sync.Mutex
 }
 
@@ -36,21 +44,49 @@ type stmtCacher struct {
 //
 // Stmts are cached based on the string value of their queries.
 func NewStmtCacher(prep Preparer) DBProxy {
-	return &stmtCacher{prep: prep, cache: make(map[string]*sql.Stmt)}
+	sc := &stmtCacher{prep: prep, cache: make(map[string]*savedStmt)}
+
+	go sc.startCleanup(maxAge)
+
+	return sc
+}
+
+func (sc *stmtCacher) startCleanup(maxAge time.Duration) {
+	for range time.NewTicker(maxAge).C {
+		sc.mu.Lock()
+
+		for k, v := range sc.cache {
+			if time.Since(v.lastUse) > maxAge {
+				v.stmt.Close()
+				delete(sc.cache, k)
+			}
+		}
+
+		sc.mu.Unlock()
+	}
 }
 
 func (sc *stmtCacher) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	stmt, ok := sc.cache[query]
-	if ok {
-		return stmt, nil
+
+	if s, ok := sc.cache[query]; ok {
+		s.lastUse = time.Now()
+
+		return s.stmt, nil
 	}
+
 	stmt, err := sc.prep.PrepareContext(ctx, query)
-	if err == nil {
-		sc.cache[query] = stmt
+	if err != nil {
+		return nil, err
 	}
-	return stmt, err
+
+	sc.cache[query] = &savedStmt{
+		stmt:    stmt,
+		lastUse: time.Now(),
+	}
+
+	return stmt, nil
 }
 
 func (sc *stmtCacher) ExecContext(ctx context.Context, query string, args ...interface{}) (res sql.Result, err error) {
@@ -61,7 +97,7 @@ func (sc *stmtCacher) ExecContext(ctx context.Context, query string, args ...int
 	return stmt.ExecContext(ctx, args...)
 }
 
-func (sc *stmtCacher) QueryContext(ctx context.Context, query string, args ...interface{}) (rows *sql.Rows, err error) {
+func (sc *stmtCacher) QueryContext(ctx context.Context, query string, args ...interface{}) (rows RowsScanner, err error) {
 	stmt, err := sc.PrepareContext(ctx, query)
 	if err != nil {
 		return
@@ -85,7 +121,7 @@ func (sc *stmtCacher) Exec(query string, args ...interface{}) (res sql.Result, e
 	return sc.ExecContext(context.Background(), query, args...)
 }
 
-func (sc *stmtCacher) Query(query string, args ...interface{}) (rows *sql.Rows, err error) {
+func (sc *stmtCacher) Query(query string, args ...interface{}) (rows RowsScanner, err error) {
 	return sc.QueryContext(context.Background(), query, args...)
 }
 
